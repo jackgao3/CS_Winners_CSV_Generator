@@ -1,0 +1,15 @@
+csv/audience/
+csv/results/
+csv/winners/
+csv/used_customer_ids.json
+
+src/services/*
+!src/services/generate_winners_csv.ts
+
+utils
+
+DB
+
+index.ts
+.env
+tsconfig.json
