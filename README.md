@@ -7,12 +7,11 @@ It supports de-duplication, quota enforcement, configurable row counts, and audi
 ---
 
 ## Features
-	•	Selects and samples records from audience.csv to produce winners.csv
-	•	Enforces allocation by offer.csv (offer_id / num_of_winners)
+	•	Automatically selects latest date's audience & offer file to generate winners.csv
+	•	Enforces randomly allocation by offer.csv (offer_id / num_of_winners)
 	•	Supports strict mode (exact match with offer quotas) and manual mode (custom row count)
 	•	Avoids reusing historical customer_ids (tracked in used_customer_ids.json and past winners files)
-	•	Timestamped filenames for traceability
-	•	Stream-based processing, tested with 10M+ rows
+	•	Add AEST timestamp(hh:mm) by end of filenames for traceability
 
 ## Directory Layout
 
@@ -70,14 +69,19 @@ MODE=manual TARGET_COUNT=500 npx ts-node src/service/generate_winners.ts
 ### Output files:
 	•	compXXXX_winners_2025-08-01_12_00.csv
 
-## Usage
+## Steps
 
-### Strict mode (row count = sum of num_of_winners in offer.csv):
+### Drop sample audience & offer csv files
+1. Directly drop audience and offer file into csv folder
+
+2. Run below commond line to trigger winner file generator: 
+
+#### Strict mode (row count = sum of num_of_winners in offer.csv):
 ```bash
 MODE=strict node src/services/generate_winners_csv.ts
 ```
 
-### Manual mode (row count = TARGET_COUNT, capped at offer capacity):
+#### Manual mode (row count = TARGET_COUNT, capped at offer capacity):
 ```bash
 MODE=manual TARGET_COUNT=1000 npx ts-node src/service/generate_winners.ts
 ```
