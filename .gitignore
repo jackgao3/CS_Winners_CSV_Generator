@@ -2,6 +2,7 @@ csv/audience/
 csv/results/
 csv/winners/
 csv/used_customer_ids.json
+csv/comp1001*.csv
 
 src/services/*
 !src/services/generate_winners_csv.ts
@@ -13,3 +14,5 @@ DB
 index.ts
 .env
 tsconfig.json
+
+.DS_Store
