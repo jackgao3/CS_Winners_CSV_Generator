@@ -13,15 +13,17 @@ if (fs.existsSync(usedPath)) {
     const usedData = JSON.parse(fs.readFileSync(usedPath, 'utf-8'));
     usedData.forEach((id: string) => usedCustomerIds.add(id));
   } catch (err) {
-    console.error('⚠️ Failed to parse used.json:', err);
+    console.error('!! Failed to parse used.json:', err);
   }
 }
 
-// Running mode
+// Running mode - strict/manual
 const MODE = (process.env.MODE as 'strict' | 'manual') ?? 'strict';
 const TARGET_COUNT = parseInt(process.env.TARGET_COUNT || '100', 10);
 
 // ================= Utils =================
+
+// Getting current timestamp in AEST sydney time - used for winners.csv's created_date_time field
 function nowSydneyTimestamp(): string {
   return new Intl.DateTimeFormat('sv-SE', {
     timeZone: 'Australia/Sydney',
@@ -32,6 +34,7 @@ function nowSydneyTimestamp(): string {
 }
 const createdDateTime = nowSydneyTimestamp();
 
+// Find the latest CSV file in target folder - order by modified time
 function pickLatestCsvByKeyword(dir: string, keyword: RegExp): string {
   const candidates = fs.readdirSync(dir).filter(f => keyword.test(f) && /\.csv$/i.test(f));
   if (candidates.length === 0) {
@@ -42,15 +45,16 @@ function pickLatestCsvByKeyword(dir: string, keyword: RegExp): string {
     const stat = fs.statSync(p);
     return { file: p, mtime: stat.mtimeMs };
   });
-  withTime.sort((a, b) => b.mtime - a.mtime);
+  withTime.sort((a, b) => b.mtime - a.mtime); // sort by modified time and get the latest file
   const chosen = withTime[0].file;
   console.log(`Using file: ${path.basename(chosen)}`);
   return chosen;
 }
 
-function generateOutputFilename(fileAPath: string): string {
-  const originalName = path.basename(fileAPath);
-  const baseName = originalName.replace(/audience/i, 'winners');
+// generate winner file name
+function generateOutputFilename(audienceFilePath: string): string {
+  const originalName = path.basename(audienceFilePath);
+  const baseName = originalName.replace(/audience/i, 'winners'); // replace audience to winners
   const now = new Date();
   const hh = String(now.getHours()).padStart(2, '0');
   const mm = String(now.getMinutes()).padStart(2, '0');
@@ -58,6 +62,7 @@ function generateOutputFilename(fileAPath: string): string {
   return baseName.replace(/(\d{4}-\d{2}-\d{2})(?:_\d{2}_\d{2})?/, `$1_${timeSuffix}`);
 }
 
+// Scan and load all history csv file under csv/ folder, collect all customer_id and exclude - deduplication
 function loadUsedFromWinnersCsv(): Set<string> {
   const ids = new Set<string>();
   const winnerFiles = fs.readdirSync(baseCsvPath).filter(f => /_winners_.*\.csv$/i.test(f));
@@ -69,7 +74,7 @@ function loadUsedFromWinnersCsv(): Set<string> {
     const header = (lines[0] || '').replace(/^\uFEFF/, '').split(',');
     const customerIdIndex = header.indexOf('customer_id');
     if (customerIdIndex === -1) {
-      console.warn(`⚠️ Skipped file without 'customer_id' column: ${file}`);
+      console.warn(`!! Skipped file without 'customer_id' column: ${file}`);
       continue;
     }
     for (let i = 1; i < lines.length; i++) {
@@ -80,7 +85,7 @@ function loadUsedFromWinnersCsv(): Set<string> {
       if (customerId) {
         ids.add(customerId);
       } else {
-        console.warn(`⚠️ Ignored empty customer_id in file "${file}", line ${i + 1}`);
+        console.warn(`!! Ignored empty customer_id in file "${file}", line ${i + 1}`);
       }
     }
   }
@@ -88,11 +93,13 @@ function loadUsedFromWinnersCsv(): Set<string> {
   return ids;
 }
 
+// Save newly used customer_id into used.json
 function saveUsedCustomerIds(ids: string[]): void {
   ids.forEach(id => usedCustomerIds.add(id));
   fs.writeFileSync(usedPath, JSON.stringify(Array.from(usedCustomerIds), null, 2));
 }
 
+// Simple shuffle function - with seed to randomly allocate
 function shuffle<T>(array: T[], seed: number): T[] {
   let currentIndex = array.length, temporaryValue: T, randomIndex: number;
   const random = () => {
@@ -110,9 +117,9 @@ function shuffle<T>(array: T[], seed: number): T[] {
 }
 
 // =============== Automatically pick latest audience/offer file ===============
-const fileA = pickLatestCsvByKeyword(baseCsvPath, /audience/i);
+const audienceFile = pickLatestCsvByKeyword(baseCsvPath, /audience/i);
 const offerFile = pickLatestCsvByKeyword(baseCsvPath, /offer/i);
-const outputFile = path.join(baseCsvPath, generateOutputFilename(fileA));
+const outputFile = path.join(baseCsvPath, generateOutputFilename(audienceFile));
 
 // =============== Offer file - load & build offer pool ===============
 const offerLimitMap = new Map<string, number>();
@@ -147,13 +154,13 @@ function buildExpandedOffersFromLimits(): string[] {
 // =============== Main process: deduplication, draw, allocation ===============
 const filteredRows: any[] = [];
 
-function processFileA(): Promise<void> {
+function processAudienceFile(): Promise<void> {
   return new Promise((resolve, reject) => {
     const usedFromCsv = loadUsedFromWinnersCsv(); // deduplication
     const tempRows: any[] = [];
     const seenCustomerIds = new Set<string>();
 
-    fs.createReadStream(fileA)
+    fs.createReadStream(audienceFile)
       .pipe(csv())
       .on('data', (row) => {
         const customerId = row['customer_id']?.trim?.() ?? String(row['customer_id'] || '').trim();
@@ -190,7 +197,6 @@ function processFileA(): Promise<void> {
         // Record the new customerIds used this time
         const newCustomerIds = sampled.map(r => r['customer_id']);
         saveUsedCustomerIds(newCustomerIds);
-
         console.log('Offer assignment summary:');
         offerCountMap.forEach((count, offerId) => {
           console.log(`  - ${offerId}: ${count}`);
@@ -234,7 +240,7 @@ function writeFilteredCSV(): Promise<void> {
     console.log(`Loaded ${offerLimitMap.size} offer entries`);
 
     console.log('Processing audience file...');
-    await processFileA();
+    await processAudienceFile();
 
     console.log('Writing winners CSV...');
     await writeFilteredCSV();
