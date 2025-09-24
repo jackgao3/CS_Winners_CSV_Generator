@@ -1,5 +1,5 @@
-csv/audience/
-csv/results/
+csv/audience/*
+csv/results/*
 csv/winners/
 csv/used_customer_ids.json
 csv/comp1001*.csv
