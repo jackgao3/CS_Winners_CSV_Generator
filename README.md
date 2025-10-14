@@ -73,12 +73,12 @@ MODE=manual TARGET_COUNT=500 npx ts-node src/service/generate_winners.ts
 
 2. Run below commond line to trigger winner file generator: 
 
-#### Strict mode (row count = sum of num_of_winners in offer.csv):
+#### Strict mode - normal condition (row count = sum of num_of_winners in offer.csv):
 ```bash
 MODE=strict node src/services/generate_winners_csv.ts
 ```
 
-#### Manual mode (row count = TARGET_COUNT, capped at offer capacity):
+#### Manual mode (row count = TARGET_COUNT, depends on offer capacity):
 ```bash
 MODE=manual TARGET_COUNT=1000 npx ts-node src/service/generate_winners.ts
 ```
