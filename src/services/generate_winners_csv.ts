@@ -40,13 +40,45 @@ function pickLatestCsvByKeyword(dir: string, keyword: RegExp): string {
   if (candidates.length === 0) {
     throw new Error(`No CSV found by ${keyword} in: ${dir}`);
   }
-  const withTime = candidates.map(f => {
-    const p = path.join(dir, f);
-    const stat = fs.statSync(p);
-    return { file: p, mtime: stat.mtimeMs };
+
+  const DATE_RE = /(\d{4})[-_](\d{2})[-_](\d{2})(?=\.csv$)/;
+
+  const scored = candidates.map(f => {
+    const full = path.join(dir, f);
+    const stat = fs.statSync(full);
+    const mtime = stat.mtimeMs;
+
+    // Extract date time from file name
+    const match = f.match(DATE_RE);
+    let nameTs: number | null = null;
+    if (match) {
+      const [_, y, m, d] = match;
+      const yyyy = y.padStart(4, '0');
+      const mm = m.padStart(2, '0');
+      const dd = d.padStart(2, '0');
+      const parsed = new Date(`${yyyy}-${mm}-${dd}T00:00:00Z`);
+      if (!isNaN(parsed.getTime())) {
+        nameTs = parsed.getTime();
+      }
+    }
+
+    // Compare date time in file name with mtime（Y-M-D）
+    const mtimeDateStr = new Date(mtime).toISOString().slice(0, 10);
+    const nameDateStr = nameTs ? new Date(nameTs).toISOString().slice(0, 10) : 'N/A';
+
+    if (nameTs && nameDateStr !== mtimeDateStr) {
+      console.warn(`⚠️ Date mismatch in file "${f}": filename=${nameDateStr}, modified=${mtimeDateStr}`);
+    }
+
+    // pick the latest date and sort
+    const finalScore = nameTs ? Math.max(nameTs, mtime) : mtime;
+    return { file: full, score: finalScore };
   });
-  withTime.sort((a, b) => b.mtime - a.mtime); // sort by modified time and get the latest file
-  const chosen = withTime[0].file;
+
+  // sort by reverse order
+  scored.sort((a, b) => b.score - a.score);
+
+  const chosen = scored[0].file;
   console.log(`Using file: ${path.basename(chosen)}`);
   return chosen;
 }
