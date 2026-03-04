@@ -7,8 +7,9 @@ A command-line tool to simulate Creata behaviour - generate winners csv file bas
 	•	Automatically selects latest date's audience & offer file to generate winners.csv
 	•	Enforces randomly allocation by offer.csv (offer_id / num_of_winners)
 	•	Supports strict mode (exact match with offer quotas) and manual mode (custom row count)
-	•	Avoids reusing historical customer_ids (tracked in used_customer_ids.json and past winners files)
+	•	//[Removed from current version] Avoids reusing historical customer_ids (tracked in used_customer_ids.json and past winners files)
 	•	Add AEST timestamp(hh:mm) by end of filenames for traceability
+	•	## [NEW FEATURE] -- Support multi-comp now, can detect audience & offer files PAIRs and capable of batch generating winner files
 
 ## Directory Layout
 
@@ -19,7 +20,8 @@ A command-line tool to simulate Creata behaviour - generate winners csv file bas
 │   │   └── generate_winners.ts       # Main script: generate winners from audience + offers
 │   └── ...
 ├── csv/                              # Folder to drop Audience and Offer file as sample file to generate winner file
-│   ├── used_customer_ids.json        # Tracking file for used customer_ids
+│   ├── audience_offer        		  # Input audience & offer files folder
+│   ├── winners        		  		  # Output winner files folder
 │   └── ...
 └── README.md
 ```
