@@ -1,5 +1,5 @@
 # CS_Winners_CSV_Generator
-A command-line tool to simulate Creata behaviour - generate winners csv file based on input Audience and Offer file to pass winner validation and process on coupon allocation testing.
+A command-line utility that simulates Creata winner generation logic by producing winners CSV files from Audience and Offer inputs. The generated output follows the same structure expected by the downstream winner validation and coupon allocation pipeline, enabling reliable end-to-end testing of the competition service workflow.
 
 ---
 
